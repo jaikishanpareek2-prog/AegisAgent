@@ -10,24 +10,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Reconstruct full source from archive segments
-        run: |
-          if ls src/aegis_s_* 1>/dev/null 2>&1; then
-            echo "Reconstructing full source tree from archive segments..."
-            cat src/aegis_s_* > /tmp/aegis.b64
-            base64 -d /tmp/aegis.b64 > /tmp/aegis-src.tar.gz
-            tar xzf /tmp/aegis-src.tar.gz -C .
-            echo "Source reconstructed. Kotlin files:"
-            find . -name "*.kt" | wc -l
-          else
-            echo "No archive segments found; using checked-out tree as-is."
-          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -38,14 +25,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platforms;android-34
-            build-tools;34.0.0
-            platform-tools
 
-      - name: Accept Android licenses
+      - name: Install Android SDK packages
         run: |
+          sdkmanager --install "platforms;android-34"
+          sdkmanager --install "build-tools;34.0.0"
+          sdkmanager --install "platform-tools"
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --list_installed
 
@@ -79,7 +64,7 @@ jobs:
           echo "=== Release APK ==="
           ls -lh "$RELEASE_APK"
           echo "=== aapt dump badging (debug) ==="
-          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging "$DEBUG_APK" | head -30 || true
+          "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$DEBUG_APK" | head -30 || true
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
