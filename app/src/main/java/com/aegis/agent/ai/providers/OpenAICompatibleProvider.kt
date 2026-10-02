@@ -11,5 +11,5 @@ class OpenAICompatibleProvider(private val providerId:String,private val name:St
  override val supportsToolCalling=true
  override suspend fun listModels()=emptyList<ModelInfo>()
  override suspend fun chat(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):ChatResponse=throw IllegalStateException("Provider network implementation pending")
- override fun chatStream(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):Flow<StreamChunk>=flow{emit(StreamChunk.Error("Provider network implementation pending"))}
+ override fun chatStream(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):Flow<StreamChunk> = flow{emit(StreamChunk.Error("Provider network implementation pending"))}
 }
