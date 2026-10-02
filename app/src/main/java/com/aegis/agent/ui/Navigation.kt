@@ -1,89 +1,28 @@
 package com.aegis.agent.ui
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.*
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import com.aegis.agent.AegisApplication
 import com.aegis.agent.ui.screens.*
+import com.aegis.agent.ui.theme.AegisCyan
+import kotlinx.coroutines.launch
 
-sealed class Dest(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
-    data object Home : Dest("home", "Home", Icons.Outlined.Home, Icons.Filled.Home)
-    data object Chat : Dest("chat", "Chat", Icons.Outlined.Chat, Icons.Filled.Chat)
-    data object Agent : Dest("agent", "Agent", Icons.Outlined.SmartToy, Icons.Filled.SmartToy)
-    data object Tasks : Dest("tasks", "Tasks", Icons.Outlined.Checklist, Icons.Filled.Checklist)
-    data object Memory : Dest("memory", "Memory", Icons.Outlined.Memory, Icons.Filled.Memory)
-    data object Tools : Dest("tools", "Tools", Icons.Outlined.Build, Icons.Filled.Build)
-    data object Settings : Dest("settings", "Settings", Icons.Outlined.Settings, Icons.Filled.Settings)
+sealed class Dest(val route:String,val label:String){data object Home:Dest("home","Home");data object Chat:Dest("chat","Chat");data object Agent:Dest("agent","Agent");data object Tasks:Dest("tasks","Tasks");data object Memory:Dest("memory","Memory");data object Tools:Dest("tools","Tools");data object Settings:Dest("settings","Settings")}
+private val bottom=listOf(Dest.Home,Dest.Chat,Dest.Agent,Dest.Tasks,Dest.Settings)
+
+@Composable fun AegisNavHost(){
+ val nav=rememberNavController();val entry by nav.currentBackStackEntryAsState();val current=entry?.destination
+ Scaffold(bottomBar={NavigationBar{bottom.forEach{d->NavigationBarItem(selected=current?.hierarchy?.any{it.route==d.route}==true,onClick={nav.navigate(d.route){popUpTo(nav.graph.findStartDestination().id){saveState=true};launchSingleTop=true;restoreState=true}},icon={Text(d.label.take(1))},label={Text(d.label)})}}}){pad->NavHost(nav,Dest.Home.route,Modifier.padding(pad)){composable(Dest.Home.route){HomeScreen{nav.navigate(it)}};composable(Dest.Chat.route){ChatScreen()};composable(Dest.Agent.route){AgentScreen()};composable(Dest.Tasks.route){TasksScreen()};composable(Dest.Memory.route){MemoryScreen()};composable(Dest.Tools.route){ToolsScreen()};composable(Dest.Settings.route){SettingsScreen()};composable("automations"){AutomationsScreen()};composable("permissions"){PermissionsScreen()};composable("diagnostics"){DiagnosticsScreen()}}}
 }
 
-private val bottomDests = listOf(Dest.Home, Dest.Chat, Dest.Agent, Dest.Tasks, Dest.Settings)
-
-@Composable
-fun AegisNavHost() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val current = navBackStackEntry?.destination
-
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                bottomDests.forEach { dest ->
-                    val selected = current?.hierarchy?.any { it.route == dest.route } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(dest.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                if (selected) dest.selectedIcon else dest.icon,
-                                contentDescription = dest.label
-                            )
-                        },
-                        label = { Text(dest.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-                }
-            }
-        }
-    ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = Dest.Home.route,
-            modifier = Modifier.padding(padding)
-        ) {
-            composable(Dest.Home.route) { HomeScreen(onNavigate = { navController.navigate(it) }) }
-            composable(Dest.Chat.route) { ChatScreen() }
-            composable(Dest.Agent.route) { AgentScreen() }
-            composable(Dest.Tasks.route) { TasksScreen() }
-            composable(Dest.Memory.route) { MemoryScreen() }
-            composable(Dest.Tools.route) { ToolsScreen() }
-            composable(Dest.Settings.route) { SettingsScreen() }
-            composable("automations") { AutomationsScreen() }
-            composable("permissions") { PermissionsScreen() }
-            composable("diagnostics") { DiagnosticsScreen() }
-        }
-    }
-}
+@Composable fun HomeScreen(onNavigate:(String)->Unit){Column(Modifier.fillMaxSize().padding(20.dp)){Text("AEGIS",style=MaterialTheme.typography.displayLarge,color=AegisCyan);Text("Autonomous personal AI agent",style=MaterialTheme.typography.bodyLarge);Spacer(Modifier.height(20.dp));Button(onClick={onNavigate("chat")}){Text("Start chatting")};Spacer(Modifier.height(8.dp));OutlinedButton(onClick={onNavigate("agent")}){Text("Run an agent task")}}}
+@Composable fun ChatScreen(){var input by remember{mutableStateOf("")};var output by remember{mutableStateOf("")};val scope=rememberCoroutineScope();Column(Modifier.fillMaxSize().padding(16.dp)){Text("Chat",style=MaterialTheme.typography.headlineMedium,color=AegisCyan);Text(output,modifier=Modifier.weight(1f));OutlinedTextField(input,{input=it},Modifier.fillMaxWidth(),label={Text("Message")});Button(onClick={scope.launch{output=AegisApplication.get().container.conversationManager.chat(input);input=""}}){Text("Send")}}}
+@Composable fun AgentScreen(){var goal by remember{mutableStateOf("")};val tm=AegisApplication.get().container.taskManager;Column(Modifier.fillMaxSize().padding(16.dp)){Text("Agent",style=MaterialTheme.typography.headlineMedium,color=AegisCyan);OutlinedTextField(goal,{goal=it},Modifier.fillMaxWidth(),label={Text("Goal")});Button(onClick={tm.start(goal)}){Text("Plan task")};Spacer(Modifier.height(16.dp));tm.currentTask.collectAsState().value?.let{Text("Status: "+it.status);Text(it.result.orEmpty())}}}
+@Composable fun SettingsScreen(){Column(Modifier.fillMaxSize().padding(16.dp)){Text("Settings",style=MaterialTheme.typography.headlineMedium,color=AegisCyan);Text("Configure your AI provider, model and permissions here.")}}
+@Composable fun PermissionsScreen(){Column(Modifier.fillMaxSize().padding(16.dp)){Text("Permissions",style=MaterialTheme.typography.headlineMedium,color=AegisCyan);Text("Android permissions are requested only when a feature needs them.")}}
