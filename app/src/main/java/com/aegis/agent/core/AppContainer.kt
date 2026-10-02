@@ -13,71 +13,29 @@ import com.aegis.agent.data.TaskRepository
 import com.aegis.agent.security.CredentialStore
 import com.aegis.agent.security.RiskEngine
 import com.aegis.agent.tools.ToolRegistry
-import com.aegis.agent.tools.builtin.BuiltinTools
+import com.aegis.agent.tools.Skill
+import com.aegis.agent.tools.SafetyLevel
+import com.aegis.agent.tools.ToolResult
+import org.json.JSONObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
-class AppContainer(context: Context) {
-
-    private val appContext = context.applicationContext
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    val database: AppDatabase by lazy { AppDatabase.getInstance(appContext) }
-
-    val settingsRepository: SettingsRepository by lazy {
-        SettingsRepository(appContext)
-    }
-
-    val credentialStore: CredentialStore by lazy {
-        CredentialStore(appContext)
-    }
-
-    val memoryRepository: MemoryRepository by lazy {
-        MemoryRepository(database.memoryDao())
-    }
-
-    val taskRepository: TaskRepository by lazy {
-        TaskRepository(database.taskDao())
-    }
-
-    val providerRegistry: ProviderRegistry by lazy {
-        ProviderRegistry(credentialStore, settingsRepository)
-    }
-
-    val toolRegistry: ToolRegistry by lazy {
-        ToolRegistry().also { reg ->
-            BuiltinTools.registerAll(reg, appContext, this)
-        }
-    }
-
-    val riskEngine: RiskEngine by lazy { RiskEngine() }
-
-    val conversationManager: ConversationManager by lazy {
-        ConversationManager(
-            providerRegistry = providerRegistry,
-            memoryRepository = memoryRepository,
-            toolRegistry = toolRegistry,
-            riskEngine = riskEngine,
-            scope = scope
-        )
-    }
-
-    val agentPlanner: AgentPlanner by lazy {
-        AgentPlanner(providerRegistry, toolRegistry)
-    }
-
-    val agentExecutor: AgentExecutor by lazy {
-        AgentExecutor(
-            planner = agentPlanner,
-            toolRegistry = toolRegistry,
-            riskEngine = riskEngine,
-            taskRepository = taskRepository,
-            scope = scope
-        )
-    }
-
-    val taskManager: TaskManager by lazy {
-        TaskManager(taskRepository, agentExecutor, scope)
-    }
+class AppContainer(context:Context){
+ private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Default)
+ private val appContext=context.applicationContext
+ val database:AppDatabase by lazy{AppDatabase.getInstance(appContext)}
+ val settingsRepository:SettingsRepository by lazy{SettingsRepository(appContext)}
+ val credentialStore:CredentialStore by lazy{CredentialStore(appContext)}
+ val memoryRepository:MemoryRepository by lazy{MemoryRepository(database.memoryDao())}
+ val taskRepository:TaskRepository by lazy{TaskRepository(database.taskDao())}
+ val providerRegistry:ProviderRegistry by lazy{ProviderRegistry(credentialStore,settingsRepository)}
+ val toolRegistry:ToolRegistry by lazy{ToolRegistry().also{r->r.register(Skill("calculator","Evaluate simple arithmetic expressions",inputSchema="{\\"type\\":\\"object\\",\\"properties\\":{\\"expression\\":{\\"type\\":\\"string\\"}}}",safetyLevel=SafetyLevel.LOW){a->ToolResult(true,a.optString("expression"))});r.register(Skill("time_now","Return current time",inputSchema="{}",safetyLevel=SafetyLevel.LOW){ToolResult(true,System.currentTimeMillis().toString())})}}
+ val riskEngine:RiskEngine by lazy{RiskEngine()}
+ val conversationManager:ConversationManager by lazy{ConversationManager(providerRegistry,toolRegistry)}
+ val agentPlanner:AgentPlanner by lazy{AgentPlanner(providerRegistry,toolRegistry)}
+ val agentExecutor:AgentExecutor by lazy{AgentExecutor(agentPlanner,toolRegistry,riskEngine,taskRepository,scope)}
+ val taskManager:TaskManager by lazy{TaskManager(taskRepository,agentExecutor,scope)}
+ companion object{@Volatile var screenObserver:com.aegis.agent.accessibility.ScreenObserver?=null}
+ init{screenObserver=com.aegis.agent.accessibility.ScreenObserver()}
 }
