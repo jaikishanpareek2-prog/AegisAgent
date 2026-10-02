@@ -10,6 +10,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 
 val AegisCyan = Color(0xFF00E5FF)
 val AegisPurple = Color(0xFF7C4DFF)
@@ -55,4 +56,10 @@ fun AegisTheme(content: @Composable () -> Unit) {
         typography = AegisTypography,
         content = content
     )
+}
+
+
+@androidx.compose.runtime.Composable
+fun GlassCard(content:@androidx.compose.runtime.Composable ()->Unit){
+ androidx.compose.material3.Card(modifier=androidx.compose.ui.Modifier.fillMaxWidth(),colors=androidx.compose.material3.CardDefaults.cardColors(containerColor=AegisCard)){androidx.compose.foundation.layout.Column(modifier=androidx.compose.ui.Modifier.padding(14.dp),content=content)}
 }
