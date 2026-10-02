@@ -1,0 +1,5 @@
+-keepattributes *Annotation*, Signature, Exception
+-keep class com.aegis.agent.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class com.squareup.moshi.** { *; }
