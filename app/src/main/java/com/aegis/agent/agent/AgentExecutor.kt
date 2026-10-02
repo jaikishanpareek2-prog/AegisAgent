@@ -1,118 +1,104 @@
 package com.aegis.agent.agent
 
-import com.aegis.agent.ai.ConversationManager
+import com.aegis.agent.ai.ChatMessage
+import com.aegis.agent.ai.ProviderRegistry
+import com.aegis.agent.data.TaskEntity
+import com.aegis.agent.data.TaskRepository
 import com.aegis.agent.security.RiskEngine
-import com.aegis.agent.security.RiskLevel
 import com.aegis.agent.tools.ToolRegistry
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
-/**
- * Executes agent plans step-by-step: PLAN -> ACT -> OBSERVE -> VERIFY.
- */
 class AgentExecutor(
-    private val conversationManager: ConversationManager,
+    private val planner: AgentPlanner,
     private val toolRegistry: ToolRegistry,
     private val riskEngine: RiskEngine,
-    private val onProgress: (AgentProgress) -> Unit = {}
+    private val taskRepository: TaskRepository,
+    private val scope: CoroutineScope
 ) {
+    private val _currentTask = MutableStateFlow<AgentTask?>(null)
+    val currentTask: StateFlow<AgentTask?> = _currentTask.asStateFlow()
 
-    suspend fun execute(plan: AgentPlan, maxSteps: Int = 12): AgentResult = withContext(Dispatchers.Default) {
-        val steps = mutableListOf<AgentStepResult>()
-        var currentGoal = plan.goal
-        var observations = plan.initialContext.orEmpty()
+    private var runningJob: Job? = null
 
-        for (stepIndex in 0 until maxSteps) {
-            onProgress(AgentProgress(stepIndex + 1, maxSteps, "Planning next action", currentGoal))
-
-            val next = conversationManager.planNextAction(
-                goal = currentGoal,
-                history = steps,
-                observations = observations,
-                availableTools = toolRegistry.listToolSpecs()
+    fun startTask(goal: String, allowHighRisk: Boolean = false) {
+        if (runningJob?.isActive == true) return
+        runningJob = scope.launch {
+            val task = AgentTask(
+                id = System.currentTimeMillis().toString(),
+                goal = goal,
+                status = TaskStatus.RUNNING,
+                allowHighRisk = allowHighRisk
             )
+            _currentTask.value = task
+            taskRepository.insert(TaskEntity(
+                id = task.id,
+                goal = goal,
+                status = task.status.name,
+                createdAt = System.currentTimeMillis()
+            ))
+            try {
+                val plan = planner.createPlan(goal)
+                val result = executePlan(plan, task)
+                val finalStatus = if (result.success) TaskStatus.COMPLETED else TaskStatus.FAILED
+                _currentTask.value = task.copy(status = finalStatus, summary = result.summary, steps = result.steps)
+                taskRepository.updateStatus(task.id, finalStatus.name, result.summary)
+            } catch (e: Exception) {
+                _currentTask.value = task.copy(status = TaskStatus.FAILED, summary = e.message)
+                taskRepository.updateStatus(task.id, TaskStatus.FAILED.name, e.message)
+            }
+        }
+    }
 
+    fun cancel() {
+        runningJob?.cancel()
+        _currentTask.value = _currentTask.value?.copy(status = TaskStatus.CANCELLED)
+    }
+
+    private suspend fun executePlan(plan: AgentPlan, task: AgentTask): AgentResult {
+        val steps = mutableListOf<AgentStepResult>()
+        var observations = plan.initialContext.orEmpty()
+        var stepNum = 0
+        val maxSteps = 15
+
+        while (scope.isActive && stepNum < maxSteps) {
+            stepNum++
+            val next = planner.nextAction(task.goal, steps, observations, toolRegistry.listToolSpecs())
             when (next) {
                 is NextAction.Finish -> {
-                    steps += AgentStepResult(
-                        step = stepIndex + 1,
-                        action = "finish",
-                        input = next.summary,
-                        output = next.summary,
-                        success = true
-                    )
-                    return@withContext AgentResult(
-                        success = true,
-                        summary = next.summary,
-                        steps = steps
-                    )
+                    steps += AgentStepResult(stepNum, "finish", next.summary, next.summary, true)
+                    return AgentResult(true, next.summary, steps)
                 }
                 is NextAction.ToolCall -> {
                     val risk = riskEngine.assess(next.toolName, next.arguments)
-                    if (risk == RiskLevel.HIGH && !plan.allowHighRisk) {
-                        steps += AgentStepResult(
-                            step = stepIndex + 1,
-                            action = next.toolName,
-                            input = next.arguments.toString(),
-                            output = "Blocked: HIGH risk requires explicit approval",
-                            success = false
-                        )
-                        return@withContext AgentResult(
-                            success = false,
-                            summary = "High-risk action blocked: ${next.toolName}",
-                            steps = steps
-                        )
+                    if (risk.level.name == "HIGH" && !task.allowHighRisk) {
+                        steps += AgentStepResult(stepNum, next.toolName, next.arguments.toString(), "Blocked HIGH risk", false)
+                        return AgentResult(false, "High risk blocked", steps)
                     }
-
-                    onProgress(AgentProgress(stepIndex + 1, maxSteps, "Executing ${next.toolName}", currentGoal))
-                    val toolResult = try {
+                    val outcome = try {
                         toolRegistry.execute(next.toolName, next.arguments)
                     } catch (e: Exception) {
-                        ToolOutcome(success = false, output = e.message ?: "Tool error")
+                        mapOf("success" to false, "output" to (e.message ?: "error"))
                     }
-
-                    steps += AgentStepResult(
-                        step = stepIndex + 1,
-                        action = next.toolName,
-                        input = next.arguments.toString(),
-                        output = toolResult.output,
-                        success = toolResult.success
-                    )
-                    observations += "\n[${next.toolName}] ${toolResult.output}"
+                    val success = outcome["success"] as? Boolean ?: false
+                    val output = outcome["output"]?.toString() ?: ""
+                    steps += AgentStepResult(stepNum, next.toolName, next.arguments.toString(), output, success)
+                    observations += "\n[${next.toolName}] $output"
+                    _currentTask.value = task.copy(steps = steps)
                 }
                 is NextAction.Error -> {
-                    steps += AgentStepResult(
-                        step = stepIndex + 1,
-                        action = "error",
-                        input = "",
-                        output = next.message,
-                        success = false
-                    )
-                    return@withContext AgentResult(
-                        success = false,
-                        summary = next.message,
-                        steps = steps
-                    )
+                    steps += AgentStepResult(stepNum, "error", "", next.message, false)
+                    return AgentResult(false, next.message, steps)
                 }
             }
         }
-
-        AgentResult(
-            success = false,
-            summary = "Max steps reached without finish",
-            steps = steps
-        )
+        return AgentResult(false, "Max steps reached", steps)
     }
 }
-
-data class AgentProgress(
-    val step: Int,
-    val maxSteps: Int,
-    val status: String,
-    val goal: String
-)
-
-data class ToolOutcome(
-    val success: Boolean,
-    val output: String
-)
