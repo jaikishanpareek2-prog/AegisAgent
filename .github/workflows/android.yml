@@ -16,17 +16,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Reconstruct full source from archive parts (if present)
+      - name: Reconstruct full source from archive segments
         run: |
-          if [ -f src/aegis_b64_part_00 ]; then
-            echo "Reconstructing full source tree from archive parts..."
-            cat src/aegis_b64_part_* > /tmp/aegis.b64
+          if ls src/aegis_s_* 1>/dev/null 2>&1; then
+            echo "Reconstructing full source tree from archive segments..."
+            cat src/aegis_s_* > /tmp/aegis.b64
             base64 -d /tmp/aegis.b64 > /tmp/aegis-src.tar.gz
             tar xzf /tmp/aegis-src.tar.gz -C .
-            echo "Source reconstructed."
+            echo "Source reconstructed. Kotlin files:"
             find . -name "*.kt" | wc -l
           else
-            echo "No archive parts; using checked-out tree as-is."
+            echo "No archive segments found; using checked-out tree as-is."
           fi
 
       - name: Set up JDK 17
@@ -53,10 +53,10 @@ jobs:
         run: |
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
             echo "Generating gradle wrapper..."
-            gradle wrapper --gradle-version 8.7 || true
+            gradle wrapper --gradle-version 8.7
           fi
           chmod +x gradlew
-          ls -la gradlew gradle/wrapper/ || true
+          ls -la gradlew gradle/wrapper/
 
       - name: Unit tests
         run: ./gradlew test --stacktrace --no-daemon
