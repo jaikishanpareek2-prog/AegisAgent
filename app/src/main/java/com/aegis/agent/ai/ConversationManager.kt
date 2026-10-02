@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 class ConversationManager(private val providerRegistry:ProviderRegistry,private val toolRegistry:ToolRegistry){
  private val messages=mutableListOf<ChatMessage>()
  fun clear()=messages.clear()
- fun history():List<ChatMessage>=messages.toList()
+ fun history():List<ChatMessage> =messages.toList()
  suspend fun chat(userText:String,systemPrompt:String?=null):String=withContext(Dispatchers.IO){
   if(systemPrompt!=null&&messages.none{it.role==ChatMessage.Role.SYSTEM})messages.add(0,ChatMessage(ChatMessage.Role.SYSTEM,systemPrompt))
   messages.add(ChatMessage(ChatMessage.Role.USER,userText))
