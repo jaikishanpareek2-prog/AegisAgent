@@ -15,7 +15,7 @@ import org.json.JSONObject
 
 class AgentExecutor(private val planner: AgentPlanner, private val toolRegistry: ToolRegistry, private val riskEngine: RiskEngine, private val taskRepository: TaskRepository, private val scope: CoroutineScope) {
  private val _currentTask=MutableStateFlow<AgentTask?>(null)
- val currentTask:StateFlow<AgentTask?>=_currentTask.asStateFlow()
+ val currentTask:StateFlow<AgentTask?> = _currentTask.asStateFlow()
  private var runningJob:Job?=null
  fun startTask(goal:String,title:String=goal.take(60)){ if(runningJob?.isActive==true)return; runningJob=scope.launch{
   val task=AgentTask(title=title,goal=goal,status=TaskStatus.RUNNING); _currentTask.value=task
