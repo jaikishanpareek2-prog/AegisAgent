@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#0A0E17</color>
+    <color name="aegis_cyan">#00E5FF</color>
+    <color name="aegis_purple">#7C4DFF</color>
+    <color name="aegis_bg">#0A0E17</color>
+    <color name="aegis_surface">#121820</color>
+    <color name="aegis_card">#1A2230</color>
+</resources>

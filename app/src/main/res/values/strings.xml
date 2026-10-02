@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aegis Agent</string>
+    <string name="accessibility_service_description">Aegis Agent uses Accessibility to observe the screen and perform UI actions when you request them. It never acts without your permission on high-risk operations.</string>
+    <string name="notification_channel_agent">Agent Tasks</string>
+    <string name="notification_channel_automation">Automations</string>
+</resources>
