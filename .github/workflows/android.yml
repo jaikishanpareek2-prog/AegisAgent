@@ -16,6 +16,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Reconstruct complete source from archive segments
+        run: |
+          if ls src/aegis_s_* 1>/dev/null 2>&1; then
+            echo "Reconstructing complete source tree..."
+            cat src/aegis_s_* > /tmp/aegis.b64
+            base64 -d /tmp/aegis.b64 > /tmp/aegis-src.tar.gz
+            tar xzf /tmp/aegis-src.tar.gz -C .
+            echo "Kotlin files:"
+            find . -name "*.kt" | wc -l
+            ls -la gradlew gradle/wrapper/ || true
+          else
+            echo "No archive segments; using checked-out tree."
+          fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -37,7 +51,6 @@ jobs:
       - name: Ensure Gradle Wrapper
         run: |
           if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Generating gradle wrapper..."
             gradle wrapper --gradle-version 8.7
           fi
           chmod +x gradlew
@@ -59,11 +72,7 @@ jobs:
           RELEASE_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -f "$DEBUG_APK"
           test -f "$RELEASE_APK"
-          echo "=== Debug APK ==="
-          ls -lh "$DEBUG_APK"
-          echo "=== Release APK ==="
-          ls -lh "$RELEASE_APK"
-          echo "=== aapt dump badging (debug) ==="
+          ls -lh "$DEBUG_APK" "$RELEASE_APK"
           "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$DEBUG_APK" | head -30 || true
 
       - name: Upload Debug APK
