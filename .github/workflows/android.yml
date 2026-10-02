@@ -16,20 +16,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Reconstruct complete source from archive segments
-        run: |
-          if ls src/aegis_s_* 1>/dev/null 2>&1; then
-            echo "Reconstructing complete source tree..."
-            cat src/aegis_s_* > /tmp/aegis.b64
-            base64 -d /tmp/aegis.b64 > /tmp/aegis-src.tar.gz
-            tar xzf /tmp/aegis-src.tar.gz -C .
-            echo "Kotlin files:"
-            find . -name "*.kt" | wc -l
-            ls -la gradlew gradle/wrapper/ || true
-          else
-            echo "No archive segments; using checked-out tree."
-          fi
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
