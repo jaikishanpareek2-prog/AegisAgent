@@ -14,7 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class AnthropicProvider(private val keyProvider:suspend()->String?):AIProvider {
- override val id="anthropic"; override val displayName="Anthropic"; override val supportsStreaming=false; override val supportsToolCalling=true
+ override val id="anthropic"; override val displayName="Anthropic"; override val supportsStreaming=false; override val supportsToolCalling=false
  private val client=OkHttpClient()
  override suspend fun listModels()=emptyList<ModelInfo>()
  override suspend fun chat(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):ChatResponse=withContext(Dispatchers.IO){
