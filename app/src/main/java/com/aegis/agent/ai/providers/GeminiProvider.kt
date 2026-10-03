@@ -26,5 +26,5 @@ class GeminiProvider(private val keyProvider:suspend()->String?):AIProvider {
   val req=Request.Builder().url(url).post(body.toString().toRequestBody("application/json".toMediaType())).build()
   client.newCall(req).execute().use{r->val raw=r.body?.string().orEmpty();if(!r.isSuccessful)throw IllegalStateException("HTTP ${r.code}: $raw");val text=JSONObject(raw).getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).optString("text");ChatResponse(ChatMessage(ChatMessage.Role.ASSISTANT,text))}
  }
- override fun chatStream(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):Flow<StreamChunk>=flow{try{val r=chat(messages,config,tools);emit(StreamChunk.TextDelta(r.message.content));emit(StreamChunk.Finished(r))}catch(e:Exception){emit(StreamChunk.Error(e.message?: "Gemini request failed",e))}}.flowOn(Dispatchers.IO)
+ override fun chatStream(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):Flow<StreamChunk> = flow{try{val r=chat(messages,config,tools);emit(StreamChunk.TextDelta(r.message.content));emit(StreamChunk.Finished(r))}catch(e:Exception){emit(StreamChunk.Error(e.message?: "Gemini request failed",e))}}.flowOn(Dispatchers.IO)
 }
