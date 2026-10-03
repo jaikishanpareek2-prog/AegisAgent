@@ -45,7 +45,7 @@ interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY updatedAt DESC LIMIT :limit")
     fun observeAll(limit: Int = 50): Flow<List<TaskEntity>>
 
-    @Query("SELECT * FROM tasks WHERE status IN ('running','paused','pending') ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM tasks WHERE status IN ('RUNNING','PAUSED','PENDING') ORDER BY updatedAt DESC")
     suspend fun getActive(): List<TaskEntity>
 
     @Query("DELETE FROM tasks WHERE id = :id")
