@@ -20,8 +20,8 @@ import kotlinx.coroutines.launch
 fun DiagnosticsScreen() {
     val context = LocalContext.current
     val container = AegisApplication.get().container
-    val a11y by AegisAccessibilityService.connected.collectAsState()
-    val notif by AegisNotificationListener.connected.collectAsState()
+    val a11y = AegisAccessibilityService.isEnabled()
+    val notif = false
     var providerStatus by remember { mutableStateOf("…") }
     val scope = rememberCoroutineScope()
 
