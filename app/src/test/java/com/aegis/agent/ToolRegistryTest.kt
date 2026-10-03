@@ -49,3 +49,10 @@ class ToolRegistryTest {
         assertFalse(result.success)
     }
 }
+
+
+@Test
+fun calculatorEvaluatorHonorsPrecedence() {
+    val value = com.aegis.agent.tools.ExpressionEvaluator().evaluate("2 + 3 * (4 - 1)")
+    assertEquals(11.0, value, 0.0)
+}
