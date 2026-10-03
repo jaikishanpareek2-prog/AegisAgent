@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aegis.agent.AegisApplication
 import com.aegis.agent.ui.theme.AegisCyan
+import com.aegis.agent.ui.theme.GlassCard
 import kotlinx.coroutines.launch
 
 @Composable
