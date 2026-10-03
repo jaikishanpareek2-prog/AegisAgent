@@ -48,7 +48,6 @@ class ToolRegistryTest {
         val result = reg.execute("x", "not-json")
         assertFalse(result.success)
     }
-}
 
     @Test
     fun calculatorEvaluatorHonorsPrecedence() {
