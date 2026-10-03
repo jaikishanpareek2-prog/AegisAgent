@@ -16,6 +16,7 @@ import com.aegis.agent.tools.ToolRegistry
 import com.aegis.agent.tools.Skill
 import com.aegis.agent.tools.SafetyLevel
 import com.aegis.agent.tools.ToolResult
+import com.aegis.agent.tools.ExpressionEvaluator
 import org.json.JSONObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +31,7 @@ class AppContainer(context:Context){
  val memoryRepository:MemoryRepository by lazy{MemoryRepository(database.memoryDao())}
  val taskRepository:TaskRepository by lazy{TaskRepository(database.taskDao())}
  val providerRegistry:ProviderRegistry by lazy{ProviderRegistry(credentialStore,settingsRepository)}
- val toolRegistry:ToolRegistry by lazy{ToolRegistry().also{r->r.register(Skill("calculator","Evaluate simple arithmetic expressions",inputSchema="""{"type":"object","properties":{"expression":{"type":"string"}}}""",safetyLevel=SafetyLevel.LOW){a->ToolResult(true,a.optString("expression"))});r.register(Skill("time_now","Return current time",inputSchema="{}",safetyLevel=SafetyLevel.LOW){ToolResult(true,System.currentTimeMillis().toString())})}}
+ val toolRegistry:ToolRegistry by lazy{ToolRegistry().also{r->r.register(Skill("calculator","Evaluate arithmetic expressions",inputSchema="""{"type":"object","properties":{"expression":{"type":"string"}}}""",safetyLevel=SafetyLevel.LOW){a->runCatching{ExpressionEvaluator().evaluate(a.optString("expression"))}.fold({ToolResult(true,it.toString())},{ToolResult(false,it.message?:"Invalid expression")})});r.register(Skill("time_now","Return current time",inputSchema="{}",safetyLevel=SafetyLevel.LOW){ToolResult(true,System.currentTimeMillis().toString())})}}
  val riskEngine:RiskEngine by lazy{RiskEngine()}
  val conversationManager:ConversationManager by lazy{ConversationManager(providerRegistry,toolRegistry)}
  val agentPlanner:AgentPlanner by lazy{AgentPlanner(providerRegistry,toolRegistry)}
