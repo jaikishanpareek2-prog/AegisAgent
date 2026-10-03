@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.aegis.agent.ui.theme.AegisCyan
+import com.aegis.agent.ui.theme.GlassCard
 
 @Composable
 fun AutomationsScreen() {
