@@ -26,5 +26,5 @@ class AnthropicProvider(private val keyProvider:suspend()->String?):AIProvider {
   val req=Request.Builder().url("https://api.anthropic.com/v1/messages").header("x-api-key",key).header("anthropic-version","2023-06-01").post(body.toString().toRequestBody("application/json".toMediaType())).build()
   client.newCall(req).execute().use{r->val raw=r.body?.string().orEmpty();if(!r.isSuccessful)throw IllegalStateException("HTTP ${r.code}: $raw");val text=JSONObject(raw).getJSONArray("content").getJSONObject(0).optString("text");ChatResponse(ChatMessage(ChatMessage.Role.ASSISTANT,text))}
  }
- override fun chatStream(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):Flow<StreamChunk>=flow{try{val r=chat(messages,config,tools);emit(StreamChunk.TextDelta(r.message.content));emit(StreamChunk.Finished(r))}catch(e:Exception){emit(StreamChunk.Error(e.message?: "Anthropic request failed",e))}}.flowOn(Dispatchers.IO)
+ override fun chatStream(messages:List<ChatMessage>,config:ModelConfiguration,tools:List<ToolDefinition>?):Flow<StreamChunk> = flow{try{val r=chat(messages,config,tools);emit(StreamChunk.TextDelta(r.message.content));emit(StreamChunk.Finished(r))}catch(e:Exception){emit(StreamChunk.Error(e.message?: "Anthropic request failed",e))}}.flowOn(Dispatchers.IO)
 }
